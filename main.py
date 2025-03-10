@@ -96,10 +96,10 @@ def generate_response(prompt):
         model=MODEL,
         messages=formatted_messages,
         response_format={"type": "text"},
-        temperature=0.7,
+        temperature=0.6,
         max_completion_tokens=2048,
         top_p=1,
-        frequency_penalty=0,
+        frequency_penalty=0.5,
         presence_penalty=0
     )
     
