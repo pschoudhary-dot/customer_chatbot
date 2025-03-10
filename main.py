@@ -19,7 +19,6 @@ st.markdown("Chat with our support assistant about Emotional Support Animal lett
 # Initialize chat history in session state if it doesn't exist
 if "messages" not in st.session_state:
     st.session_state.messages = []
-    # Add system message at the beginning
     st.session_state.messages.append({
         "role": "system", 
         "content": [{"type": "text", "text": """You are a professional customer support assistant for Wellness Wag, specializing in helping customers with ESA (Emotional Support Animal) and PSD (Psychiatric Service Dog) letters. Respond to customer inquiries with accurate, helpful information in a warm, conversational tone.
@@ -56,7 +55,7 @@ if "messages" not in st.session_state:
         }]
     })
 
-# Display chat history (excluding system message)
+# Display chat history
 for message in st.session_state.messages:
     if message["role"] != "system":
         with st.chat_message(message["role"]):
@@ -69,22 +68,16 @@ for message in st.session_state.messages:
 
 # Function to generate response
 def generate_response(prompt):
-    # Define the fine-tuned model
     MODEL = "ft:gpt-3.5-turbo-0125:enacton-technologies-private-limited:wellneswag:B9SmjJ8Q"
     
-    # Format the new user message in the structured format
     formatted_prompt = [{"type": "text", "text": prompt}]
     
-    # Create messages array with all messages in the correct format
     formatted_messages = []
     
-    # Add all messages from history with proper formatting
     for message in st.session_state.messages:
-        # Skip if content is already in the right format
         if isinstance(message["content"], list):
             formatted_messages.append(message)
         else:
-            # Convert string content to structured format
             formatted_messages.append({
                 "role": message["role"],
                 "content": [{"type": "text", "text": message["content"]}]
@@ -101,11 +94,9 @@ def generate_response(prompt):
         presence_penalty=0
     )
     
-    # Get the text from the response
     if hasattr(response.choices[0].message, 'content'):
         return response.choices[0].message.content
     else:
-        # Handle structured content if returned
         content_list = response.choices[0].message.content
         if isinstance(content_list, list):
             return "\n".join([item["text"] for item in content_list if item["type"] == "text"])
