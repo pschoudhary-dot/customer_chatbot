@@ -1,13 +1,21 @@
 import streamlit as st
-from openai import OpenAI
+from langfuse.openai import OpenAI
 import os
 from dotenv import load_dotenv
+from langfuse import Langfuse
+from langfuse.decorators import observe
+
 
 # Load environment variables
 load_dotenv()
+LANGFUSE_PUBLIC_KEY = os.getenv("LANGFUSE_PUBLIC_KEY")
+LANGFUSE_SECRET_KEY = os.getenv("LANGFUSE_SECRET_KEY")
+LANGFUSE_HOST = "https://cloud.langfuse.com"
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Initialize OpenAI client (will use OPENAI_API_KEY from environment)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+langfuse = Langfuse()
+
 
 # App title and configuration
 st.set_page_config(
@@ -47,6 +55,7 @@ for message in st.session_state.messages:
                     if content_item["type"] == "text":
                         st.markdown(content_item["text"])
 
+@observe()
 # Function to generate response
 def generate_response(prompt):
     # Define the fine-tuned model
