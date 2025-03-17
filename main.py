@@ -16,6 +16,21 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 langfuse = Langfuse()
 
+# Default system prompt
+DEFAULT_SYSTEM_PROMPT = """You are a highly professional and helpful customer support assistant for Wellness Wag, a company specializing in providing Emotional Support Animal (ESA) letters. Your primary responsibility is to assist users with accurate, clear, and empathetic answers related to the process of obtaining ESA letters, including but not limited to the legal requirements, eligibility criteria, application process, state-specific laws, and the overall steps involved in obtaining an ESA letter.
+
+You should ensure that all responses are professional, concise, and respectful, addressing users' inquiries in a supportive and informative manner. In cases where a user asks for guidance, you should offer clear and actionable steps to assist them in navigating the process. and while referencing law ensure to properly reference which law you are addressing to
+
+It is important that you do not respond to any inquiries that are unrelated to the issuance of ESA letters or Wellness Wag's services. This includes, but is not limited to, requests for creative content such as poems, songs, or any other off-topic discussions. Additionally, avoid engaging in any casual, irrelevant, or inappropriate conversations.
+
+Your focus should remain entirely on assisting users in understanding the requirements and process of obtaining an ESA letter, and providing them with the best support and resources available."""
+
+# Model lidts
+MODELS = {
+    "Initial Support Bot": "ft:gpt-4o-mini-2024-07-18:enacton-technologies-private-limited::B9tchehH",
+    "Retrained Support Bot": "ft:gpt-4o-mini-2024-07-18:enacton-technologies-private-limited:wellneswag2:BC2S4jkT",
+    "New Model": "ft:gpt-4o-mini-2024-07-18:enacton-technologies-private-limited:wellneswag-new:BC2ati68"
+}
 
 # App title and configuration
 st.set_page_config(
@@ -23,8 +38,67 @@ st.set_page_config(
     page_icon="🐾",
 )
 
+# Initialize system prompt in session state if not already present
+if "system_prompt" not in st.session_state:
+    st.session_state.system_prompt = DEFAULT_SYSTEM_PROMPT
+
+# Track previously selected model to detect changes
+if "previous_model" not in st.session_state:
+    st.session_state.previous_model = list(MODELS.keys())[0]
+
+# Sidebar for model selection and system prompt configuration
+with st.sidebar:
+    st.title("Settings")
+    
+    # Model selection dropdown
+    selected_model_name = st.selectbox(
+        "Select Model",
+        options=list(MODELS.keys()),
+        index=list(MODELS.keys()).index(st.session_state.previous_model)
+    )
+    
+    # Check if model selection has changed
+    if selected_model_name != st.session_state.previous_model:
+        # Reset chat history
+        if "messages" in st.session_state:
+            st.session_state.messages = []
+            st.session_state.messages.append({
+                "role": "system", 
+                "content": [{"type": "text", "text": st.session_state.system_prompt}]
+            })
+        # Update the previous model
+        st.session_state.previous_model = selected_model_name
+        st.rerun()
+    
+    # Get the model ID from the selected name
+    selected_model = MODELS[selected_model_name]
+    
+    # System prompt editor
+    st.subheader("System Prompt")
+    
+    # Text area for editing system prompt
+    new_system_prompt = st.text_area(
+        "Edit System Prompt",
+        value=st.session_state.system_prompt,
+        height=300
+    )
+    
+    # Button to update system prompt
+    if st.button("Update System Prompt"):
+        st.session_state.system_prompt = new_system_prompt
+        # Reset messages to incorporate new system prompt
+        st.session_state.messages = []
+        st.session_state.messages.append({
+            "role": "system", 
+            "content": [{"type": "text", "text": st.session_state.system_prompt}]
+        })
+        st.success("System prompt updated!")
+        st.rerun()
+
+# Main content area
 st.title("Wellness Wag Support")
 st.markdown("Chat with our support assistant about Emotional Support Animal letters.")
+st.caption(f"Currently using: {selected_model_name}")
 
 # Initialize chat history in session state if it doesn't exist
 if "messages" not in st.session_state:
@@ -32,16 +106,7 @@ if "messages" not in st.session_state:
     # Add system message at the beginning
     st.session_state.messages.append({
         "role": "system", 
-        "content": [{"type": "text",
-         "text": """You are a highly professional and helpful customer support assistant for Wellness Wag, a company specializing in providing Emotional Support Animal (ESA) letters. Your primary responsibility is to assist users with accurate, clear, and empathetic answers related to the process of obtaining ESA letters, including but not limited to the legal requirements, eligibility criteria, application process, state-specific laws, and the overall steps involved in obtaining an ESA letter.
-
-You should ensure that all responses are professional, concise, and respectful, addressing users' inquiries in a supportive and informative manner. In cases where a user asks for guidance, you should offer clear and actionable steps to assist them in navigating the process.
-
-It is important that you do not respond to any inquiries that are unrelated to the issuance of ESA letters or Wellness Wag’s services. This includes, but is not limited to, requests for creative content such as poems, songs, or any other off-topic discussions. Additionally, avoid engaging in any casual, irrelevant, or inappropriate conversations.
-
-Your focus should remain entirely on assisting users in understanding the requirements and process of obtaining an ESA letter, and providing them with the best support and resources available.
-"""
-        }]
+        "content": [{"type": "text", "text": st.session_state.system_prompt}]
     })
 
 # Display chat history (excluding system message)
@@ -58,8 +123,8 @@ for message in st.session_state.messages:
 @observe()
 # Function to generate response
 def generate_response(prompt):
-    # Define the fine-tuned model
-    MODEL = "ft:gpt-4o-mini-2024-07-18:enacton-technologies-private-limited::B9tchehH"
+    # Get the currently selected model
+    MODEL = MODELS[selected_model_name]
     
     # Format the new user message in the structured format
     formatted_prompt = [{"type": "text", "text": prompt}]
